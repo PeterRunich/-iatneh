@@ -1,6 +1,6 @@
 from os import system
 from sys import platform
-if platform.lower() == 'windows':
+if platform.lower() == 'win32':
     system('clr')
 else:
     system('clear')
