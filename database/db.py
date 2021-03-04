@@ -1,5 +1,5 @@
-from ..lib.decorators import query_decorator
-from ..lib.singleton import Singleton
+from ..local_libs.decorators import query_decorator
+from ..local_libs.singleton import Singleton
 import sqlite3
 import asyncio
 
