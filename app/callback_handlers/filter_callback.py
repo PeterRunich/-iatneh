@@ -21,8 +21,10 @@ async def process_callback_button1(cq):
     elif action == 'search':
         await cq.answer() # нужно отвечать callback кнопкам иначе у пользователя повиснит белый таймер
         genres = cq['message']['text'].split(',')[1:] # в cq хранится старый словарь с информацией о старом inline keyboard там есть поле cq['message']['text'] там хранится все жанры выбранные пользователем, тут мы вытаскиваем все жанры для дальнейшего поиска
+        return False if genres == [] else True # если жанры не выбранны
         kb = await anime_show_kb_builder(Sqlite().find_anime_by_genre(genres))
-        await bot.send_message(cq['message']['chat']['id'], 'Результаты', reply_markup=kb)
+        
+        await bot.send_message(cq['message']['chat']['id'], f"Результаты: {' подходящих записей не найдено.' if kb['inline_keyboard'] == [] else ''}", reply_markup=kb)
         return True
 
     await bot.edit_message_text(cq['message']['text'],
