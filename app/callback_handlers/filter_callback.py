@@ -6,7 +6,6 @@ from aiogram.dispatcher.filters import Text
 from ...database.db import Sqlite
 from ..bot import bot, dispatcher
 from contextlib import suppress
-
 """Callback обработчик клавиатуры с фильтрами (cqid = cq1)"""
 
 @dispatcher.callback_query_handler(Text(startswith="cq1")) # callback текс приходит в виде "id callback handlera:action:arg1:arg2:arg3"
@@ -15,11 +14,11 @@ async def filter_callback(cq):
     args   = cq.data.split(':')[2:] # выделяем лист аргументов
 
     if action == 'move_to':
-        kb = await filter_kb_builder(int(args[0]), 30)
+        kb = await filter_kb_builder(int(args[0]), 30, genres=cq['message']['text'].split(',')[1:])
 
     elif action == 'add_to_filter':
         cq['message']['text'] += ',' + args[0] # в cq хранится старый словарь с информацией о старом inline keyboard там есть поле cq['message']['text'] там хранится все жанры выбранные пользователем, тут мы добавляем просто ещё один жанр к этой строке
-        kb = await filter_kb_builder(1, 30)
+        kb = await filter_kb_builder(1, 30, genres=cq['message']['text'].split(',')[1:])
 
     elif action == 'no_action':
         await cq.answer()
@@ -48,7 +47,7 @@ async def filter_callback(cq):
         if not page_number.isdigit() or int(page_number) < 1 or int(page_number) > 1000:
             return
 
-        kb = await filter_kb_builder(int(page_number), 30)
+        kb = await filter_kb_builder(int(page_number), 30, genres=cq['message']['text'].split(',')[1:])
 
     with suppress(MessageNotModified): # перехватывает ошибку о изменение контента сообщения на такой же контент
         await bot.edit_message_text(cq['message']['text'],
