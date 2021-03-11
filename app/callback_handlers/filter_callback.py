@@ -9,25 +9,35 @@ from contextlib import suppress
 """Callback обработчик клавиатуры с фильтрами (cqid = cq1)"""
 
 @dispatcher.callback_query_handler(Text(startswith="cq1")) # callback текс приходит в виде "id callback handlera:action:arg1:arg2:arg3"
-async def filter_callback(cq):
+async def filter_callback(cq): # в cq хранится старый словарь с информацией о старом inline keyboard там есть поле cq['message']['text'] там хранится все жанры выбранные пользователем
     action = cq.data.split(':')[1] # выделяем действие которое будет обработано
     args   = cq.data.split(':')[2:] # выделяем лист аргументов
 
     if action == 'move_to':
-        kb = await filter_kb_builder(int(args[0]), 30, genres=cq['message']['text'].split(',')[1:])
+        kb = await filter_kb_builder(int(args[0]), 30, genres=await get_genres(cq['message']['text']))
 
     elif action == 'add_to_filter':
-        cq['message']['text'] += ',' + args[0] # в cq хранится старый словарь с информацией о старом inline keyboard там есть поле cq['message']['text'] там хранится все жанры выбранные пользователем, тут мы добавляем просто ещё один жанр к этой строке
-        kb = await filter_kb_builder(1, 30, genres=cq['message']['text'].split(',')[1:])
+        genres = await get_genres(cq['message']['text'])
+
+        if args[0] in genres:
+            genres.remove(args[0])
+            cq['message']['text'] = cq['message']['text'].split(':')[0] + ':' + ','.join(genres)
+        else:
+            if cq['message']['text'][-1] == ':':
+                cq['message']['text'] += args[0]
+            else:
+                cq['message']['text'] += ',' + args[0]
+
+        kb = await filter_kb_builder(1, 30, genres=await get_genres(cq['message']['text']))
 
     elif action == 'no_action':
         await cq.answer()
         return
 
     elif action == 'search':
-        genres = cq['message']['text'].split(',')[1:] # в cq хранится старый словарь с информацией о старом inline keyboard там есть поле cq['message']['text'] там хранится все жанры выбранные пользователем, тут мы вытаскиваем все жанры для дальнейшего поиска
+        genres = await get_genres(cq['message']['text'])
 
-        if genres == []:
+        if genres == ['']:
             await cq.answer()
             return # если жанры не выбранны
 
@@ -38,7 +48,7 @@ async def filter_callback(cq):
         return
 
     elif action == 'go_to_page':
-        if args == ['']: # если в аргументе не пришла страница то спрашиваем полльзователя
+        if args == ['']: # если в аргументе не пришла страница то спрашиваем пользователя
             await ask_filter_page_number(cq['message']['chat']['id'], cq['message']['text'], cq['message']['message_id'])
             await cq.answer()
             return
@@ -47,7 +57,7 @@ async def filter_callback(cq):
         if not page_number.isdigit() or int(page_number) < 1 or int(page_number) > 1000:
             return
 
-        kb = await filter_kb_builder(int(page_number), 30, genres=cq['message']['text'].split(',')[1:])
+        kb = await filter_kb_builder(int(page_number), 30, genres=await get_genres(cq['message']['text']))
 
     with suppress(MessageNotModified): # перехватывает ошибку о изменение контента сообщения на такой же контент
         await bot.edit_message_text(cq['message']['text'],
@@ -57,3 +67,6 @@ async def filter_callback(cq):
 
     if action not in ['go_to_page']: # т.к действия в списке вызваны из кода то нам не надо отправлять на сервер сообшение о успешной обработке callback
         await cq.answer()
+
+async def get_genres(genres_str):
+    return genres_str.split(':')[1].split(',')

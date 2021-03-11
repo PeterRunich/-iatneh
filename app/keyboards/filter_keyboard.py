@@ -47,7 +47,7 @@ async def highlight_selected_genres(kb, data, genres):
 
         if str(genre_data[0]) in genres:
             text += " ✅"
-        print(text, genre_data[0])
+
         kb.insert(InlineKeyboardButton(text, callback_data=f"cq1:add_to_filter:{genre_data[0]}"))
 
     return kb
