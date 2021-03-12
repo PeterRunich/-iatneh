@@ -6,6 +6,7 @@ from aiogram.dispatcher.filters import Text
 from ...database.db import Sqlite
 from ..bot import bot, dispatcher
 from contextlib import suppress
+from ..helpers.show_anime_with_photo import generate_message
 """Callback обработчик клавиатуры с фильтрами (cqid = cq1)"""
 
 @dispatcher.callback_query_handler(Text(startswith="cq1")) # callback текс приходит в виде "id callback handlera:action:arg1:arg2:arg3"
@@ -41,8 +42,7 @@ async def filter_callback(cq): # в cq хранится старый слова�
             await cq.answer()
             return # если жанры не выбранны
 
-        kb = await anime_show_kb_builder(Sqlite().find_anime_by_genre(genres))
-        await bot.send_message(cq['message']['chat']['id'], f"Результаты: {' подходящих записей не найдено.' if kb['inline_keyboard'] == [] else ''}", reply_markup=kb)
+        await generate_message(Sqlite().find_anime_by_genre(genres), cq['message']['chat']['id'])
         await cq.answer()
         await bot.delete_message(cq['message']['chat']['id'], cq['message']['message_id']) # удаляем inline панель с жанрами
         return
