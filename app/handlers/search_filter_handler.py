@@ -5,7 +5,8 @@ from ..helpers.start_kb_helper import start_kb
 from aiogram.dispatcher.filters import Text
 from .back_handler import back_dialog
 from ...database.db import Sqlite
-from ..bot import dispatcher
+from ..bot import dispatcher, bot
+from ..helpers.show_anime_with_photo import generate_message
 """Обработчик поиска аниме по имени"""
 
 class Search(StatesGroup): # отвечает за описание FSM маршрута
@@ -23,8 +24,7 @@ async def search(msg, state):
         await back_dialog(msg, state)
         return True # прерываем функцию т.к пользователь не захотел идти дальше
 
-    kb = await anime_show_kb_builder(Sqlite().find_anime_by_name(msg.text)) # строим клавиатуру из результатов метода find_anime_by_name из БД
     await state.finish() # обнуляем состояние т.к это конечное состояние
     await start_kb(msg) # возваращаем клавиатуру главного меню /start
     await msg.answer('Поиск по "' + msg.text + '"')
-    await msg.answer(f"Результаты: {' подходящих записей не найдено.' if kb['inline_keyboard'] == [] else ''}", reply_markup=kb)
+    await generate_message(Sqlite().find_anime_by_name(msg.text), msg['chat']['id'])
