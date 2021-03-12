@@ -44,10 +44,15 @@ async def filter_kb_builder(current_page_number, limit, genres=[]):
 async def highlight_selected_genres(kb, data, genres):
     for genre_data in data:
         text = genre_data[1]
-
         if str(genre_data[0]) in genres:
             text += " ✅"
 
-        kb.insert(InlineKeyboardButton(text, callback_data=f"cq1:add_to_filter:{genre_data[0]}"))
+        if len(text) > 15:
+            kb.row_width = 1
+            kb.row(InlineKeyboardButton(text, callback_data=f"cq1:add_to_filter:{genre_data[0]}"))
+        else:
+            kb.insert(InlineKeyboardButton(text, callback_data=f"cq1:add_to_filter:{genre_data[0]}"))
+            kb.row_width = 3
+
 
     return kb
