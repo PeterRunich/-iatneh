@@ -1,12 +1,12 @@
 from ..keyboards.anime_show_keyboard import anime_show_kb_builder
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from ..helpers.show_anime_with_photo import generate_message
 from ..keyboards.back_keyboard import back_kb_builder
 from ..helpers.start_kb_helper import start_kb
 from aiogram.dispatcher.filters import Text
 from .back_handler import back_dialog
 from ...database.db import Sqlite
 from ..bot import dispatcher, bot
-from ..helpers.show_anime_with_photo import generate_message
 """Обработчик поиска аниме по имени"""
 
 class Search(StatesGroup): # отвечает за описание FSM маршрута
