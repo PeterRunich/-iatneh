@@ -1,18 +1,14 @@
-from ._base_keyboard_pagination import BaseKeyboardPagination, BaseKeyboardPaginationExtension, BasePaginationControls
+from ._base_keyboard_pagination import BaseKeyboardPagination, BaseKeyboardPaginationExtension
 from aiogram.types import InlineKeyboardButton
 from ...database.db import Sqlite
-import math
-"""Создаёт и возвращает inline панель с жанрами и pagination"""
 
-async def filter_kb_builder(current_page_number, last_page_num, limit, genre_ids=[]):
-    offset = (current_page_number - 1) * limit
-    data = Sqlite().get_genres(limit, offset)
+async def finded_genre_by_name_kb(genres, genre_ids):
     callback_id = 'cq1'
 
-    return BaseKeyboardPagination(last_page_num,
+    return BaseKeyboardPagination(0,
                                   callback_id,
-                                  current_page_number,
-                                  [GenreFilters(data, genre_ids), BasePaginationControls(), GenresFilterControls()]).kb
+                                  0,
+                                  [GenreFiltersBack(), GenreFilters(genres, genre_ids)]).kb
 
 class GenreFilters(BaseKeyboardPaginationExtension):
     def __init__(self, all_genres, selected_genre_ids):
@@ -37,9 +33,7 @@ class GenreFilters(BaseKeyboardPaginationExtension):
                 self.pgn.kb.insert(InlineKeyboardButton(genre_name, callback_data=f'{self.pgn.callback_id}:{action}:{genre_id}'))
                 self.pgn.kb.row_width = 3
 
-class GenresFilterControls(BaseKeyboardPaginationExtension):
+class GenreFiltersBack(BaseKeyboardPaginationExtension):
     def _extender(self):
-        self.pgn.kb.add(InlineKeyboardButton('Перейти на страницу по номеру', callback_data="cq1:ask_page_to_go:"),
-                        InlineKeyboardButton('Поиск жанра по названию', callback_data="cq1:find_genre_by_name:"),
-                        InlineKeyboardButton('Показать выбраные жанры', callback_data="cq1:show_selected_genres:"),
-                        InlineKeyboardButton('Поиск 🔎', callback_data="cq1:search:"))
+        self.pgn.kb.row_width = 1
+        self.pgn.kb.row(InlineKeyboardButton('Назад', callback_data=f'{self.pgn.callback_id}:back:'))

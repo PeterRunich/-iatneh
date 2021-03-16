@@ -6,5 +6,5 @@ from ..bot import dispatcher
 @dispatcher.message_handler(Text(equals="назад", ignore_case=True), state="*")
 # ВНИМАНИЕ back_dialog используется в search_filter_handler
 async def back_dialog(msg, state=False): # если хочеешь обнулить стейт то не забудь передать аргументом
-    await state.finish() if state != False else ''
+    if state: await state.finish()
     await start_kb(msg)

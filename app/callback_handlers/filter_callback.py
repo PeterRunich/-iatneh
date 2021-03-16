@@ -1,72 +1,78 @@
 from ..handlers.ask_filter_page_number_handler import ask_filter_page_number
-from ..keyboards.anime_show_keyboard import anime_show_kb_builder
+from ..helpers.show_anime_with_photo import show_anime_with_photo
 from ..keyboards.filter_keyboard import filter_kb_builder
 from aiogram.utils.exceptions import MessageNotModified
+from ..helpers.selected_genres import selected_genres
+from ..handlers.ask_genre_name import ask_genre_name
 from aiogram.dispatcher.filters import Text
+from ._base_callback import BaseCallback
 from ...database.db import Sqlite
-from ..bot import bot, dispatcher
 from contextlib import suppress
-from ..helpers.show_anime_with_photo import generate_message
+from ..bot import dispatcher
+import math
 """Callback обработчик клавиатуры с фильтрами (cqid = cq1)"""
 
-@dispatcher.callback_query_handler(Text(startswith="cq1")) # callback текс приходит в виде "id callback handlera:action:arg1:arg2:arg3"
-async def filter_callback(cq): # в cq хранится старый словарь с информацией о старом inline keyboard там есть поле cq['message']['text'] там хранится все жанры выбранные пользователем
-    action = cq.data.split(':')[1] # выделяем действие которое будет обработано
-    args   = cq.data.split(':')[2:] # выделяем лист аргументов
+@dispatcher.callback_query_handler(Text(startswith="cq1")) # callback текст приходит в виде "id callback handlera:action:arg1:arg2:arg3"
+async def filter_callback(cq, callback_answer=True):
+    await FilterCallback(cq, callback_answer)._init_()
 
-    if action == 'move_to':
-        kb = await filter_kb_builder(int(args[0]), 30, genres=await get_genres(cq['message']['text']))
+class FilterCallback(BaseCallback):
+    def __init__(self, cq, callback_answer):
+        super().__init__(cq, callback_answer)
 
-    elif action == 'add_to_filter':
-        genres = await get_genres(cq['message']['text'])
+        self.last_page = math.ceil(Sqlite().count_genres() / 30)
 
-        if args[0] in genres:
-            genres.remove(args[0])
-            cq['message']['text'] = cq['message']['text'].split(':')[0] + ':' + ','.join(genres)
-        else:
-            if cq['message']['text'][-1] == ':':
-                cq['message']['text'] += args[0]
-            else:
-                cq['message']['text'] += ',' + args[0]
+    async def add_to_filter(self, genre_id):
+        genre_ids = self.__parse_genre_ids()
 
-        kb = await filter_kb_builder(1, 30, genres=await get_genres(cq['message']['text']))
+        if self.message_text[-1] != ':': self.message_text += ','
+        self.message_text += genre_id
 
-    elif action == 'no_action':
-        await cq.answer()
-        return
+        genre_ids.append(genre_id)
+        kb = await filter_kb_builder(1, self.last_page, 30, genre_ids=genre_ids)
+        await self.__send_edited_kb(kb)
 
-    elif action == 'search':
-        genres = await get_genres(cq['message']['text'])
+    async def change_page_to(self, page_num):
+        kb = await filter_kb_builder(int(page_num), self.last_page, 30, genre_ids=self.__parse_genre_ids())
+        await self.__send_edited_kb(kb)
 
-        if genres == ['']:
-            await cq.answer()
-            return # если жанры не выбранны
+    async def ask_page_to_go(self):
+        await ask_filter_page_number(self.chat_id, self.message_text, self.message_id)
 
-        await generate_message(Sqlite().find_anime_by_genre(genres), cq['message']['chat']['id'])
-        await cq.answer()
-        await bot.delete_message(cq['message']['chat']['id'], cq['message']['message_id']) # удаляем inline панель с жанрами
-        return
+    async def search(self):
+        genre_ids = self.__parse_genre_ids()
 
-    elif action == 'go_to_page':
-        if args == ['']: # если в аргументе не пришла страница то спрашиваем пользователя
-            await ask_filter_page_number(cq['message']['chat']['id'], cq['message']['text'], cq['message']['message_id'])
-            await cq.answer()
-            return
+        if genre_ids == ['']: await self.cq.answer(); return;
 
-        page_number = args[0]
-        if not page_number.isdigit() or int(page_number) < 1 or int(page_number) > 1000:
-            return
+        self.callback_answer = False
 
-        kb = await filter_kb_builder(int(page_number), 30, genres=await get_genres(cq['message']['text']))
+        await show_anime_with_photo(self.chat_id, 'genre', genre_ids, Sqlite().find_anime_by_genre(genre_ids))
 
-    with suppress(MessageNotModified): # перехватывает ошибку о изменение контента сообщения на такой же контент
-        await bot.edit_message_text(cq['message']['text'],
-        chat_id=cq['message']['chat']['id'],
-        message_id=cq['message']['message_id'],
-        reply_markup=kb)
+        await self.cq['message'].delete()
 
-    if action not in ['go_to_page']: # т.к действия в списке вызваны из кода то нам не надо отправлять на сервер сообшение о успешной обработке callback
-        await cq.answer()
+    async def remove_from_filter(self, genre_id):
+        genre_ids = self.__parse_genre_ids()
 
-async def get_genres(genres_str):
-    return genres_str.split(':')[1].split(',')
+        genre_ids.remove(genre_id)
+        self.message_text = 'Фильтры:' + ','.join(genre_ids)
+
+        kb = await filter_kb_builder(1, self.last_page, 30, genre_ids=genre_ids)
+        await self.__send_edited_kb(kb)
+
+    async def find_genre_by_name(self):
+        await ask_genre_name(self.chat_id, self.__parse_genre_ids(), self.cq['message']['text'], self.message_id)
+
+    async def show_selected_genres(self):
+        await selected_genres(self.chat_id, self.__parse_genre_ids(), self.cq['message']['text'], self.message_id)
+
+    async def back(self):
+        kb = await filter_kb_builder(1, self.last_page, 30, genre_ids=self.__parse_genre_ids())
+
+        await self.__send_edited_kb(kb)
+
+    async def __send_edited_kb(self, kb):
+        with suppress(MessageNotModified): # перехватывает ошибку о изменение контента сообщения на такой же контент
+            await self.cq['message'].edit_text(self.message_text, reply_markup=kb)
+
+    def __parse_genre_ids(self):
+        return self.message_text.split(':')[1].split(',')
