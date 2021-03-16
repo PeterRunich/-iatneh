@@ -1,8 +1,24 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultPhoto
+from ._base_keyboard_pagination import BaseKeyboardPagination, BaseKeyboardPaginationExtension, BasePaginationControls
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import math
 """Создаёт и возвращает inline панель с кнопками с названием аниме и ссылкой на ресурс"""
 
-async def anime_show_kb_builder(animes):
-    kb = InlineKeyboardMarkup() # базовый элемент inline клавиатуры который будет наполняться дальше
-    [kb.insert(InlineKeyboardButton(anime[1], url=anime[2])) for anime in animes] # добавляем жанры в базовый элемент клавиатуры (чтобы работоло ограничение row_width нужно заполнять базовый элемент методом insert)
+async def anime_show_kb_builder(animes, last_page_number, current_page_number=1, limit=10):
+    callback_id = 'cq2'
 
-    return kb # возвращаем готовую панель
+    return BaseKeyboardPagination(last_page_number,
+                                  callback_id,
+                                  current_page_number,
+                                  [Animes(animes), BasePaginationControls()]).kb
+
+class Animes(BaseKeyboardPaginationExtension):
+    def __init__(self, animes):
+        self.animes = animes
+
+    def _extender(self):
+        for anime in self.animes:
+            anime_name = anime[1]
+            anime_source_url = anime[2]
+
+            self.pgn.kb.row_width = 3
+            self.pgn.kb.insert(InlineKeyboardButton(anime_name, url=anime_source_url))

@@ -23,8 +23,12 @@ async def recieve_page_number(msg, state):
     data = await state.get_data()
     data_cq = json.loads(data['cq_data'])
 
-    cq = CallbackQuery(data=f'cq1:go_to_page:{msg.text}', message=Message(text=data_cq['text'], message_id=int(data_cq['message_id']), chat=Chat(id=int(data_cq['chat_id'])))) #создаём программно callback чтобы успешно обработать его в filter_callback
-    await fc.filter_callback(cq)
+    if not msg.text.isdigit() or int(msg.text) < 1 or int(msg.text) > 1000:
+        msg.text = 1
+        
+    # будет проблема если пльзователь вобьёт какуб нибудь парашу
+    cq = CallbackQuery(data=f'cq1:change_page_to:{msg.text}', message=Message(text=data_cq['text'], message_id=int(data_cq['message_id']), chat=Chat(id=int(data_cq['chat_id'])))) #создаём программно callback чтобы успешно обработать его в filter_callback
+    await fc.filter_callback(cq, callback_answer=False)
 
     await msg.delete()
     await bot.delete_message(data_cq['chat_id'], data['ask_msg_id'])
