@@ -44,10 +44,19 @@ class Sqlite(metaclass=Singleton):
 
     @query_decorator
     def find_anime_by_genre(self, genres, limit=0, offset=0):
-        query = "select * from animes a where "
-        for genre_id in genres:
-            query += f"EXISTS (SELECT * FROM animes_genres ag WHERE a.id = ag.anime_id AND ag.genre_id = {genre_id}) and "
-        query = query[:-4] # удаляет не нужный and в конце запроса, он появляется из-за предыдущий строки
+        query = "select * from animes a"
+
+        for i, _ in enumerate(genres):
+            query += f" join animes_genres ag{i} on a.id = ag{i}.anime_id"
+
+        query += ' where'
+
+        for i, genre_id in enumerate(genres):
+            query += f" ag{i}.genre_id = {genre_id} and"
+
+
+        query = query[:-4] # удаляет не нужный and в конце запроса, он появляется из-за предыдущий строки\
+
         if limit != 0: query += f' limit {limit} offset {offset}'
 
         return self.cursor.execute(query).fetchall(), query
