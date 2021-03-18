@@ -57,7 +57,11 @@ class Sqlite(metaclass=Singleton):
 
         query = query[:-4] # удаляет не нужный and в конце запроса, он появляется из-за предыдущий строки\
 
+        query += ' group by a.id'
+        
         if limit != 0: query += f' limit {limit} offset {offset}'
+
+        print(query)
 
         return self.cursor.execute(query).fetchall(), query
 
