@@ -1,0 +1,1 @@
+import Yana.config.application
