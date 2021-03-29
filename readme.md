@@ -10,6 +10,6 @@
 4. Запустить файл start.py 
 ```
    python -m start
-   hupper -m start (запуск с hot reload)
+   hupper -m start (запуск с auto reload)
 ```
 *При использовании CMD, консоль следует запускать от имени администратора
