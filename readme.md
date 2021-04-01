@@ -4,7 +4,7 @@
 2. Установить переменную среды "TG_BOT_TOKEN"
    ```
    Для PowerShell $env:TG_BOT_TOKEN="Токен"
-   Для CMD set=Токен
+   Для CMD set TG_BOT_TOKEN=Токен
    Для Linux export TG_BOT_TOKEN=Токен
    ```
 4. Запустить файл start.py 
